@@ -26,7 +26,7 @@ D_E_REF = 2.0e-10         # 电解液扩散系数参考值
 KAPPA_SEP = 0.164         # 隔膜电导率
 
 # --- SEI 相关 ---
-D_SOLV = 2.5e-22
+D_SOLV = 1.25e-21
 V_SEI = 9.585e-5
 C_SOLV_BULK = 2636.0
 KAPPA_SEI = 5.0e-6

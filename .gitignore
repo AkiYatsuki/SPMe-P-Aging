@@ -9,3 +9,7 @@ env/
 .vscode/
 
 *.csv
+*.png
+*.DS_Store
+
+plot_results.py
