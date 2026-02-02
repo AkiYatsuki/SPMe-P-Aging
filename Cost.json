@@ -1,0 +1,34 @@
+{
+  "profiles": {
+    "idle": {
+      "cpu": { "util": 5.0, "freq_high": false, "is_on": true },
+      "lcd": { "brightness": 0.0 },
+      "gps": { "state": "Off" },
+      "wifi": { "state": "Low", "r_channel": 54.0, "r_uplink": 0.0 },
+      "cellular": { "state": "Idle" },
+      "audio": { "is_playing": false }
+    },
+    "video_streaming": {
+      "cpu": { "util": 45.0, "freq_high": true, "is_on": true },
+      "lcd": { "brightness": 200.0 },
+      "gps": { "state": "Off" },
+      "wifi": { "state": "High", "r_channel": 54.0, "r_uplink": 5.0 },
+      "cellular": { "state": "Idle" },
+      "audio": { "is_playing": true }
+    },
+    "navigation_3g": {
+      "cpu": { "util": 60.0, "freq_high": true, "is_on": true },
+      "lcd": { "brightness": 255.0 },
+      "gps": { "state": "On" },
+      "wifi": { "state": "Off", "r_channel": 0.0, "r_uplink": 0.0 },
+      "cellular": { "state": "Dch" },
+      "audio": { "is_playing": true }
+    }
+  },
+  "timeline": [
+    { "time": 0.0, "use_profile": "idle" },
+    { "time": 1000.0, "use_profile": "video_streaming" },
+    { "time": 3000.0, "use_profile": "navigation_3g" },
+    { "time": 4500.0, "use_profile": "idle" }
+  ]
+}
