@@ -23,6 +23,14 @@
       "wifi": { "state": "Off", "r_channel": 0.0, "r_uplink": 0.0 },
       "cellular": { "state": "Dch" },
       "audio": { "is_playing": true }
+    }, 
+    "gaming_heavy": {
+      "cpu": {"util": 70, "freq_high": true, "is_on": true}, 
+      "lcd": {"brightness": 255.0}, 
+      "gps": { "state": "On" },
+      "wifi": { "state": "High", "r_channel": 1.0, "r_uplink": 10.0 },
+      "cellular": { "state": "Dch" },
+      "audio": { "is_playing": true }
     }
   },
   "timeline": [

@@ -1,3 +1,4 @@
+import json
 import pandas as pd
 import numpy as np
 from simulation.init_utils import get_initial_state_by_soh
@@ -7,8 +8,19 @@ class AgingScanner:
     def __init__(self):
         # 定义扫描配置
         self.soh_levels = [1.0, 0.95, 0.90, 0.85, 0.80]
-        # 请确保这些名称与 Cost.json 中的 key 一致
-        self.apps = ["Gaming_High", "Video_Streaming", "Social_App", "Standby"]
+
+        # --- Automatically load App list from Cost.json ---
+        try: 
+            with open("Cost.json", "r") as f: 
+                data = json.load(f)
+            # 获取profile所有键名
+            self.apps = list(data["profiles"].keys())
+            print(f"Loaded profiles from json: {self.apps}")
+
+        except FileNotFoundError: 
+            print("Error: Cost.json not found, jusing default fallback. ")
+            self.apps = ["idle"] #Fallback
+
         self.results = []
 
     def run(self):
