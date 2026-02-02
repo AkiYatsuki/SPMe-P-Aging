@@ -17,11 +17,30 @@ class ExternalState:
     AGEING: float = 1.0
 
 class BatterySystem:
-    def __init__(self):
-        # 预计算一些几何参数
-        self.Asurf_n = c.AREA * c.L_NEG * 3.0 * c.EPS_S_NEG / c.R_S_NEG
-        self.Asurf_p = c.AREA * c.L_POS * 3.0 * c.EPS_S_POS / c.R_S_POS
-        self.L_total = c.L_POS + 2.0 * c.L_SEP + c.L_NEG
+    def __init__(self, param_overrides=None):
+        """
+        param_overrides: 字典，用于覆盖 config.py 中的默认参数
+        例如: {'D_E_REF': 1.5e-10, 'K0': 2e-5}
+        """
+        # 1. 建立参数字典，默认使用 config 的值
+        self.p = {
+            'AREA': c.AREA, 'L_NEG': c.L_NEG, 'L_POS': c.L_POS, 'L_SEP': c.L_SEP,
+            'EPS_S_NEG': c.EPS_S_NEG, 'EPS_S_POS': c.EPS_S_POS, 'R_S_NEG': c.R_S_NEG,
+            'R_S_POS': c.R_S_POS, 'C_MAX_NEG': c.C_MAX_NEG, 'C_MAX_POS': c.C_MAX_POS,
+            'D_E_REF': c.D_E_REF, 'T0_POS': c.T0_POS, 'KAPPA_SEP': c.KAPPA_SEP,
+            'D_SOLV': c.D_SOLV, 'V_SEI': c.V_SEI, 'KAPPA_SEI': c.KAPPA_SEI,
+            'K0': c.K0, 'ALPHA': c.ALPHA,
+            # ... 您想扫描的其他参数都可以在这里列出 ...
+        }
+        
+        # 2. 如果有传入覆盖值，则更新字典
+        if param_overrides:
+            self.p.update(param_overrides)
+
+        # 3. 使用 self.p['KEY'] 替代 c.KEY 计算几何参数
+        self.Asurf_n = self.p['AREA'] * self.p['L_NEG'] * 3.0 * self.p['EPS_S_NEG'] / self.p['R_S_NEG']
+        self.Asurf_p = self.p['AREA'] * self.p['L_POS'] * 3.0 * self.p['EPS_S_POS'] / self.p['R_S_POS']
+        self.L_total = self.p['L_POS'] + 2.0 * self.p['L_SEP'] + self.p['L_NEG']
 
     def derivatives(self, t: float, y: np.ndarray, ext: ExternalState) -> np.ndarray:
         """
@@ -32,15 +51,16 @@ class BatterySystem:
         y[4]: delta_ce_dyn (动态浓差修正)
         """
         c_s_bar, c_e_bar, T, L_SEI, delta_ce_dyn = y
+        p = self.p  # 简写引用
         
         # 1. c_s_bar rate
-        dcs_dt = -ext.I / (c.EPS_S_NEG * ext.SOH) / c.F / c.L_NEG / c.AREA
+        dcs_dt = -ext.I / (p['EPS_S_NEG'] * ext.SOH) / c.F / p['L_NEG'] / p['AREA']
         
         # 2. c_e_bar rate
-        dce_dt = (1.0 - c.T0_POS) / (c.EPS_E * c.F) * (ext.I / c.L_POS - ext.I / c.L_NEG)
+        dce_dt = (1.0 - p['T0_POS']) / (c.EPS_E * c.F) * (ext.I / p['L_POS'] - ext.I / p['L_NEG'])
         
         # 3. L_SEI growth rate
-        d_lsei_dt = c_s_bar * c.D_SOLV * np.exp(-3000.0 * (1.0/T - 1.0/298.15)) * c.V_SEI / 2.0 / L_SEI
+        d_lsei_dt = c_s_bar * p['D_SOLV'] * np.exp(-3000.0 * (1.0/T - 1.0/298.15)) * p['V_SEI'] / 2.0 / L_SEI
         
         # 4. Temperature rate (Heat Balance)
         # Q_in = I^2*R + Q_device; Q_out = h*A*(T-Tamb)
@@ -49,7 +69,7 @@ class BatterySystem:
         dT_dt = (heat_gen - heat_diss) / (c.MASS_PHONE * c.CP_PHONE)
         
         # 5. Delta Ce relaxation
-        delta_ce_target = (1.0 - c.T0_POS) / (2.0 * c.F * ext.D_e) * (ext.I * c.L_SEP)
+        delta_ce_target = (1.0 - p['T0_POS']) / (2.0 * c.F * ext.D_e) * (ext.I * p['L_SEP'])
         tau_diff = (self.L_total**2) / (20.0 * ext.D_e)
         d_delta_ce_dt = (delta_ce_target - delta_ce_dyn) / tau_diff
         
@@ -60,28 +80,29 @@ class BatterySystem:
         new_ext = ExternalState(**ext.__dict__) # Clone
         
         c_s_bar, c_e_bar, T, L_SEI, delta_ce_dyn = y
+        p = self.p
         
         # SOH Calc
-        q_nominal = c.EPS_S_NEG * c.F * c.L_NEG * c.AREA * c.C_MAX_NEG
+        q_nominal = p['EPS_S_NEG'] * c.F * p['L_NEG'] * p['AREA'] * p['C_MAX_NEG']
         vol_sei = self.Asurf_n * L_SEI
-        q_lost = (vol_sei / c.V_SEI) * c.F
+        q_lost = (vol_sei / p['V_SEI']) * c.F
         new_ext.SOH = np.clip(1.0 - q_lost / q_nominal, 0.01, 1.0)
-        new_ext.AGEING = 1.0 - L_SEI / c.L_NEG # Simplified ageing factor from Rust
+        new_ext.AGEING = 1.0 - L_SEI / p['L_NEG'] # Simplified ageing factor from Rust
 
         # SOC
         new_ext.SOC = c_s_bar / (ext.c_smax * new_ext.SOH)
         
         # Diffusivity & Conductivity
-        new_ext.D_e = c.D_E_REF * np.exp(-1.0/T + 1.0/298.15)
+        new_ext.D_e = p['D_E_REF'] * np.exp(-1.0/T + 1.0/298.15)
         
         # R_tot
-        r_ohm = self.L_total / (4.0 * c.KAPPA_SEP * c.AREA)
-        r_sei = L_SEI / (self.Asurf_n * c.KAPPA_SEI)
+        r_ohm = self.L_total / (4.0 * p['KAPPA_SEP'] * p['AREA'])
+        r_sei = L_SEI / (self.Asurf_n * p['KAPPA_SEI'])
         new_ext.R_tot = r_ohm + r_sei + 0.002
 
         # --- Voltage Calculation ---
         # Concentrations
-        delta_ce = (1.0 - c.T0_POS) / (2.0 * c.F * new_ext.D_e) * (ext.I * c.L_SEP) # Instantaneous approx for voltage
+        delta_ce = (1.0 - p['T0_POS']) / (2.0 * c.F * new_ext.D_e) * (ext.I * p['L_SEP']) # Instantaneous approx for voltage
         # Rust logic uses state y[4] for dynamics but recalculates simplified delta_ce for OCV sometimes.
         # Let's align with Rust's `calculate` method which recalculates `delta_ce`.
         
@@ -91,12 +112,12 @@ class BatterySystem:
         c_e_p = c_e_bar + y[4]
         
         # Avoid math domain error
-        term_n = max(1e-9, (c_e_n * c_s_bar * (c.C_MAX_NEG - c_s_bar)))
-        i_0n = c.K0 * new_ext.AGEING * (term_n ** c.ALPHA)
+        term_n = max(1e-9, (c_e_n * c_s_bar * (p['C_MAX_NEG'] - c_s_bar)))
+        i_0n = p['K0'] * new_ext.AGEING * (term_n ** p['ALPHA'])
         
         theta_p_proxy = 0.4 + 0.585 * (0.99 - theta_n) # Rust logic match
-        term_p = max(1e-9, (c_e_p * c.C_MAX_POS**2 * theta_p_proxy * (1.0 - theta_p_proxy)))
-        i_0p = c.K0 * new_ext.AGEING * (term_p ** c.ALPHA)
+        term_p = max(1e-9, (c_e_p * p['C_MAX_POS']**2 * theta_p_proxy * (1.0 - theta_p_proxy)))
+        i_0p = p['K0'] * new_ext.AGEING * (term_p ** p['ALPHA'])
 
         # OCV Potentials
         u_n = self._ocv_neg(theta_n)
@@ -106,7 +127,7 @@ class BatterySystem:
         eta_n = (2 * c.R * T / c.F) * np.arcsinh(-ext.I / (2 * self.Asurf_n * i_0n))
         eta_p = (2 * c.R * T / c.F) * np.arcsinh(ext.I / (2 * self.Asurf_p * i_0p))
         
-        v_conc = (2 * c.R * T / c.F) * (1 - c.T0_POS) * np.log((c_e_bar + delta_ce) / (c_e_bar - delta_ce))
+        v_conc = (2 * c.R * T / c.F) * (1 - p['T0_POS']) * np.log((c_e_bar + delta_ce) / (c_e_bar - delta_ce))
         
         # Terminal Voltage
         new_ext.V = u_p - u_n + eta_p - eta_n + v_conc - new_ext.I * new_ext.R_tot
@@ -122,6 +143,7 @@ class BatterySystem:
         """Newton-Raphson to find I for CV charging"""
         # (This implements the logic from Rust's solve_current_at_voltage)
         # Simplified context setup for brevity, relying on key params
+        p = self.p
         i_guess = -1.0 # Start with charging guess
         
         # Extract needed constants for the loop
@@ -137,8 +159,8 @@ class BatterySystem:
         term_rtf = 2.0 * c.R * T / c.F
         
         # Approx i0 (assuming average concentrations for stability in solver)
-        i_0n = c.K0 * ext.AGEING * ((1000.0 * c_s_n * (c.C_MAX_NEG - c_s_n))**c.ALPHA)
-        i_0p = c.K0 * ext.AGEING * ((1000.0 * c.C_MAX_POS**2 * theta_p * (1-theta_p))**c.ALPHA)
+        i_0n = p['K0'] * ext.AGEING * ((1000.0 * c_s_n * (p['C_MAX_NEG'] - c_s_n))**p['ALPHA'])
+        i_0p = p['K0'] * ext.AGEING * ((1000.0 * p['C_MAX_POS']**2 * theta_p * (1-theta_p))**p['ALPHA'])
         
         for _ in range(10):
             arg_n = i_guess / (2.0 * self.Asurf_n * i_0n)

@@ -5,14 +5,14 @@ from models.power_model import SimulationPlan
 from models.battery_model import BatterySystem
 from solver import RK4Solver
 
-def run_single_static_test(y0, ext_state, app_profile_name, duration=3600):
+def run_single_static_test(y0, ext_state, app_profile_name, duration=3600, internal_params=None):
     """
     运行单次静态负载测试。
     输入: 物理初值 y0, 外部状态 ext_state, App名称, 持续时间
     输出: (SOH衰减速率/小时, 平均温度)
     """
     # 1. 初始化系统
-    system = BatterySystem()
+    system = BatterySystem(param_overrides=internal_params)
     solver = RK4Solver(0.0, y0)
     
     # 2. 获取负载配置
