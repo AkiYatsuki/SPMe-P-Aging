@@ -1,6 +1,6 @@
 import numpy as np
 import config as c
-from battery_model import BatterySystem, ExternalState
+from models.battery_model import BatterySystem, ExternalState
 
 def get_initial_state_by_soh(target_soh: float, soc_start: float = 1.0) -> tuple:
     """
