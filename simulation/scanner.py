@@ -91,6 +91,25 @@ class Scanner:
         
         if loss_rate is None: return
 
+        # === 智能的寿命预测 ===
+        est_life_hours = np.inf
+        prediction_note = "Stable"
+
+        # 阈值：如果瞬时衰减太快（>1e-5），说明处于非线性剧烈变化区（如SOH 100%）
+        # 或者直接用 SOH 判断
+        if soh > 0.98:
+            est_life_hours = np.nan # 不预测，因为不准
+            prediction_note = "Transient (Formation)"
+        elif loss_rate > 1e-12:
+            # 线性外推: (0.2 即 20% 容量) / 速率
+            # 注意：这里假设从当前点匀速跑到 80%，比较保守
+            # 更精确的是：(当前SOH - 0.8) / loss_rate
+            remaining_capacity_to_lose = soh - 0.80
+            if remaining_capacity_to_lose > 0:
+                est_life_hours = remaining_capacity_to_lose / loss_rate
+            else:
+                est_life_hours = 0
+
         # 3. 组装结果
         record = {
             "Type": scan_type,
@@ -98,7 +117,8 @@ class Scanner:
             "App": app_name,
             "Avg_Temp_C": avg_temp,
             "Aging_Rate_Hr": loss_rate,
-            "Est_Life_Hours": 0.2 / loss_rate if loss_rate > 1e-12 else np.inf
+            "Est_Life_Hours": est_life_hours, ## 可能为 NaN
+            "Phase_Note": prediction_note #说明字段
         }
         
         # 合并额外的参数信息（如果是内部扫描）

@@ -7,3 +7,5 @@ venv/
 env/
 
 .vscode/
+
+*.csv
