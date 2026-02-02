@@ -13,36 +13,30 @@ from simulation.simulator import run_single_static_test
 import config as c
 
 def run_experiment():
-    print("=== Experiment 3: SOH x Temperature Matrix Scan ===")
-    print("Hypothesis: Aged batteries (Lower SOH) suffer more from Thermal Stress.")
-
-    # 1. 定义扫描矩阵
-    # SOH: 从新电池 (1.0) 到 寿命末期 (0.8)
-    soh_levels = [1.0, 0.95, 0.90, 0.85, 0.80]
+    print("=== Experiment 3: High-Res SOH x Temperature Matrix Scan ===")
     
-    # 环境温度: 模拟不同散热条件或气温
-    temps_c = [25, 35, 45]
+    # 1. 定义更高分辨率的扫描矩阵
+    # SOH: 避开 1.0 (化成期)，从 0.96 细密扫描到 0.80
+    # np.linspace 生成均匀分布的点
+    soh_levels = np.linspace(0.96, 0.80, 9)  # [0.96, 0.94, ..., 0.80] 
+    soh_levels = np.round(soh_levels, 3)     # 避免浮点数误差
     
-    # 固定使用高负载 Profile (放大效应)
+    # 温度: 加密温度点，捕捉非线性
+    temps_c = [25, 30, 35, 40, 45]
+    
     profile = "5g_gaming_heavy"
-    
     results = []
+    
+    print(f"Scanning {len(soh_levels)} SOH levels x {len(temps_c)} Temps = {len(soh_levels)*len(temps_c)} iterations.")
     
     # 2. 矩阵扫描
     for soh in soh_levels:
         for T_amb in temps_c:
-            # 准备参数覆盖
-            # 注意：我们需要强制覆盖 config 中的环境温度
-            # 同时也需要确保 y0 中的初始温度也是 T_amb
-            
-            # 临时修改全局配置
             original_temp = c.T_AMB
             c.T_AMB = T_amb + 273.15
             
             try:
-                # 获取初始状态
                 y0, ext_init = get_initial_state_by_soh(soh)
-                # 强制同步初始温度（否则电池从25度开始升温，误差大）
                 y0[2] = c.T_AMB 
                 
                 # 运行模拟 (3小时稳态)
@@ -52,37 +46,29 @@ def run_experiment():
                     duration=10800 
                 )
                 
-                # 记录结果
                 results.append({
                     "SOH_Start": soh,
                     "Ambient_Temp": T_amb,
                     "Avg_Battery_Temp": avg_batt_temp,
                     "Aging_Rate": rate,
-                    # 计算温升 (电池平均温度 - 环境温度)
                     "Temp_Rise": avg_batt_temp - T_amb
                 })
                 
-                print(f"SOH: {soh:.2f} | Tamb: {T_amb}C | Tbatt: {avg_batt_temp:.1f}C (+{avg_batt_temp-T_amb:.1f}) | Rate: {rate:.2e}")
+                print(f"SOH: {soh:.2f} | Tamb: {T_amb}C | Rate: {rate:.2e}")
                 
             finally:
-                # 恢复环境温度
                 c.T_AMB = original_temp
 
-    # 3. 数据分析
+    # 3. 保存到 results 文件夹
     df = pd.DataFrame(results)
     
-    # 创建透视表 (Pivot Table) 方便观察
-    print("\n=== Aging Rate Matrix (The 'Death Map') ===")
-    pivot_rate = df.pivot(index="SOH_Start", columns="Ambient_Temp", values="Aging_Rate")
-    print(pivot_rate)
+    # 自动创建 results 文件夹
+    results_dir = os.path.join(project_root, "results")
+    os.makedirs(results_dir, exist_ok=True)
     
-    print("\n=== Temperature Rise Matrix (Internal Resistance Effect) ===")
-    pivot_temp = df.pivot(index="SOH_Start", columns="Ambient_Temp", values="Temp_Rise")
-    print(pivot_temp)
-    
-    # 保存
-    df.to_csv("results_exp_03_matrix.csv", index=False)
-    print("\nResults saved to results_exp_03_matrix.csv")
+    csv_path = os.path.join(results_dir, "exp_03_matrix_high_res.csv")
+    df.to_csv(csv_path, index=False)
+    print(f"\nData saved to: {csv_path}")
 
 if __name__ == "__main__":
     run_experiment()
