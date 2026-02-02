@@ -16,7 +16,7 @@
       "cellular": { "state": "Idle" },
       "audio": { "is_playing": true }
     },
-    "navigation_3g": {
+    "navigation": {
       "cpu": { "util": 60.0, "freq_high": true, "is_on": true },
       "lcd": { "brightness": 255.0 },
       "gps": { "state": "On" },
@@ -30,6 +30,14 @@
       "gps": { "state": "On" },
       "wifi": { "state": "High", "r_channel": 1.0, "r_uplink": 10.0 },
       "cellular": { "state": "Dch" },
+      "audio": { "is_playing": true }
+    }, 
+    "gaming_5g": {
+      "cpu": { "util": 90.0, "freq_high": true, "is_on": true },
+      "lcd": { "brightness": 200.0 },
+      "gps": { "state": "On" },
+      "wifi": { "state": "Off" },
+      "cellular": { "state": "Connected", "bw": 100.0, "ant": 4, "fr2_mode": true },
       "audio": { "is_playing": true }
     }
   },

@@ -11,6 +11,9 @@ def get_initial_state_by_soh(target_soh: float, soc_start: float = 1.0) -> tuple
     Q_nominal = c.EPS_S_NEG * c.F * c.L_NEG * c.AREA * c.C_MAX_NEG
     
     # 2. 反推 L_SEI (SEI 厚度)
+    # 注意：这里我们假设初始时刻死锂(Q_dead)为0，所有 SOH 损失都来自 SEI
+    # 这只是为了初始化方便。实际上老电池会有大量死锂。
+    # 如果想更精确，可以分配 loss: 80% SEI, 20% Dead Li
     # SOH = 1 - (lost / nominal) -> lost = (1 - SOH) * nominal
     q_lost = (1.0 - target_soh) * Q_nominal
     # q_lost = (vol_sei / V_SEI) * F -> vol_sei = q_lost * V_SEI / F
@@ -35,7 +38,9 @@ def get_initial_state_by_soh(target_soh: float, soc_start: float = 1.0) -> tuple
         1000.0,         # 电解液浓度 (假设平衡态)
         c.T_AMB,        # 初始温度
         l_sei_init,     # 反推的 SEI 厚度
-        0.0             # 动态浓差初始为 0
+        0.0,            # 动态浓差初始为 0
+        0.0,            # Q_rev 初始为 0 (无析锂)
+        0.0,            # Q_dead 初始为 0 (我们把历史衰减都算在 SEI 里了，为了简化初始化)
     ]
     
     # 5. 初始化外部状态

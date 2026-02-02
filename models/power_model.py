@@ -61,11 +61,26 @@ class DeviceState:
             p_high = PowerConstants.WIFI_HIGH_BASE + beta_cr * self.wifi.get('r_uplink', 0)
             p += max(0, p_high)
 
-        # Cellular
-        c_state = self.cellular.get('state')
-        if c_state == 'Idle': p += PowerConstants.BETA_3G_IDLE
-        elif c_state == 'Fach': p += PowerConstants.BETA_3G_FACH
-        elif c_state == 'Dch': p += PowerConstants.BETA_3G_DCH
+        # 5G
+        c_state = self.cellular.get('state', 'Off')
+        p_5g = 0.0
+
+        if c_state == 'Idle': 
+            p_5g = config.BETA_5G_IDLE
+        elif c_state == 'Interactive': 
+            p_5g = config.BETA_5G_INA
+        elif c_state == 'Connected': 
+            bw = self.cellular.get('bw', 20.0)
+            ant = self.cellular.get('ant', 1) # 天线数
+
+            p_5g = config.BETA_5G_BASE_CONN \
+                 + config.BETA_5G_BW \
+                 + config.BETA_5G_MIMO * float(ant)
+            
+        if self.cellular.get('fr2_mode', False) and c_state != 'Off': 
+            p_5g += config.BETA_5G_MMW
+
+        p += p_5g
 
         # Audio
         if self.audio.get('is_playing'):
@@ -99,11 +114,25 @@ class DeviceState:
             p_high = max(0, PowerConstants.WIFI_HIGH_BASE + beta_cr * self.wifi.get('r_uplink', 0))
             q += p_high * PowerConstants.K_TH['wifi_h']
 
-        # Cellular
-        c_state = self.cellular.get('state')
-        if c_state == 'Idle': q += PowerConstants.BETA_3G_IDLE * PowerConstants.K_TH['cell_idle']
-        elif c_state == 'Fach': q += PowerConstants.BETA_3G_FACH * PowerConstants.K_TH['cell_active']
-        elif c_state == 'Dch': q += PowerConstants.BETA_3G_DCH * PowerConstants.K_TH['cell_active']
+        # 5G
+        c_state = self.cellular.get('state', 'Off')
+        p_cell = 0.0
+        # 重新计算一次功率用于产热 (或者优化代码结构)
+        if c_state == 'Idle': p_cell = config.BETA_5G_IDLE
+        elif c_state == 'Interactive': p_cell = config.BETA_5G_INA
+        elif c_state == 'Connected':
+             bw = self.cellular.get('bw', 20.0)
+             ant = self.cellular.get('ant', 1)
+             p_cell = config.BETA_5G_BASE_CONN + config.BETA_5G_BW * bw + config.BETA_5G_MIMO * ant
+        if self.cellular.get('fr2_mode', False) and c_state != 'Off':
+            p_cell += config.BETA_5G_MMW
+
+        # 应用产热系数
+        k_th = config.K_TH_5G_LOW # 默认为 Idle/Inactive
+        if c_state == 'Connected':
+            k_th = config.K_TH_5G_HIGH
+            
+        q += p_cell * k_th
 
         # Audio
         if self.audio.get('is_playing'):

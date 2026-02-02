@@ -35,6 +35,12 @@ KAPPA_SEI = 5.0e-6
 K0 = 1e-5
 ALPHA = 0.5
 
+# --- Plating Parameters ---
+K_PLATING = 1e-4       # 析锂交换电流密度系数
+ALPHA_PLATING = 0.5    # 析锂传递系数
+GAMMA_0 = 1.0e-4       # 死锂转化率 (1/s)
+L_SEI_0 = 5.0e-9       # 初始SEI参考厚度
+
 # --- 热学参数 ---
 MASS_BATT = 0.045
 CP_BATT = 1000.0
@@ -50,3 +56,15 @@ START_CHARGE_SOC = 0.10         # 10%
 STOP_CHARGE_SOC = 0.93          # 93%
 STOP_CHARGE_I = 0.005           # A
 RATIO = 0.8
+
+# --- 5G 功耗模型参数 ---
+BETA_5G_IDLE = 35.0
+BETA_5G_INA = 150.0
+BETA_5G_BASE_CONN = 300.0
+BETA_5G_BW = 2.0        # mW/MHz
+BETA_5G_MIMO = 100.0    # mW/Ant
+BETA_5G_MMW = 600.0     # 毫米波额外功耗
+
+# --- [新增] 5G 产热系数 ---
+K_TH_5G_LOW = 0.98      # Idle/Inactive
+K_TH_5G_HIGH = 0.70     # Connected

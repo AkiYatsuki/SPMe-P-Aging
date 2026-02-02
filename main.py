@@ -30,7 +30,7 @@ def main():
         scanner.run_internal_scan(
             param_dict = sensitivity_plan, 
             fixed_soh = 0.90, 
-            fixed_app = "gaming_heavy", 
+            fixed_app = "gaming_5g", 
             duration = 7200
         )
 

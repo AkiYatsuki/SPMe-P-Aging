@@ -1,0 +1,13 @@
+{
+  "profiles": {
+    "gaming_5g": {
+      "cpu": { "util": 90.0, "freq_high": true, "is_on": true },
+      "lcd": { "brightness": 200.0 },
+      "gps": { "state": "On" },
+      "wifi": { "state": "Off" },
+      "cellular": { "state": "Connected", "bw": 100.0, "ant": 4, "fr2_mode": true },
+      "audio": { "is_playing": true }
+    }
+  },
+  "timeline": []
+}
